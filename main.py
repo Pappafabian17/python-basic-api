@@ -2,7 +2,7 @@ from fastapi import FastAPI, Body, Path, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional
-
+from user_jwt import createToken
 
 app = FastAPI(
   title='Aprendiendo FastApi',
@@ -17,15 +17,10 @@ class Movie(BaseModel):
   year : int = Field(default=2025)
   rating : float = Field(ge=1, le=10)
   category : str = Field(default='Categoria', min_length=3 , max_length=15)
-  def to_dict(self):
-    return{
-      'id' : self.id,
-      'title' : self.title,
-      'overview' : self.overview,
-      'year' : self.year,
-      'rating' : self.rating,
-      'category' : self.category
-    }
+
+class User(BaseModel):
+  email: str
+  password: str
 
 
 movies = [
@@ -46,6 +41,13 @@ movies = [
     'category' : 'Crimen' 
   }
 ]
+
+@app.post('/login', tags=["authentication"])
+def login(user : User):
+  if user.email == 'fabian@gmail.com' and user.password == '123':
+    token : str = createToken(dict(user))
+    print(token)
+    return JSONResponse(content=token)
 
 @app.get('/',tags=['Inicio'])
 def read_root():
