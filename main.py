@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Body
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from fastapi import FastAPI, Body, Path, Query
+from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
@@ -12,11 +12,20 @@ app = FastAPI(
 
 class Movie(BaseModel):
   id:Optional[int] = None
-  title: str
-  overview: str
-  year : int
-  rating : float
-  category : str
+  title: str = Field( default='Titulo ', min_length=3)
+  overview: str =  Field(default='Descripcion de la pelicula ', min_length=15 , max_length=60)
+  year : int = Field(default=2025)
+  rating : float = Field(ge=1, le=10)
+  category : str = Field(default='Categoria', min_length=3 , max_length=15)
+  def to_dict(self):
+    return{
+      'id' : self.id,
+      'title' : self.title,
+      'overview' : self.overview,
+      'year' : self.year,
+      'rating' : self.rating,
+      'category' : self.category
+    }
 
 
 movies = [
@@ -44,47 +53,40 @@ def read_root():
 
 @app.get('/movies',tags=['Movies'])
 def get_movies():
-  return movies
+  return JSONResponse(content=movies)
 
 @app.get('/movies/{id}',tags=['Movies'])
-def get_movie(id: int):
+def get_movie(id: int = Path(ge=1, le=100) ) :
   for item in movies:
     if item['id'] == id:
       return item
   return []
 
 @app.get('/movies/', tags=['Movies'])
-def get_movies_by_category(category : str):
+def get_movies_by_category(category : str = Query(default='Categoria', min_length=3 , max_length=15)):
   return category
 
-@app.post('/movies',tags=['Movies'])
+@app.post('/movies',tags=['Movies'], status_code=201)
 def create_movie(movie:Movie):
   movies.append(movie)
   print(movies)
-  return movie.title
+  return JSONResponse(status_code=201, content={'message': 'se ha cargado una nueva pelicula', 'movie' : [dict(movie) for movie in movies]})
 
 
-@app.put('/movies/{id}', tags=['Movies'])
-def update_movie(
-  id: int ,
-  title : str = Body(),
-  overview : str = Body(), 
-  year: int = Body(),
-  rating : float = Body(),
-  category : str = Body()
-):
-  for movie in movies:
-    if movie['id'] == id:
-      movie['title']= title,
-      movie['overview']= overview,
-      movie['year']= year,
-      movie['rating']= rating,
-      movie['category']= category
-      return movies
+@app.put('/movies/{id}', tags=['Movies'],status_code=200)
+def update_movie(id : int, movie :Movie ):
+  for item in movies:
+    if item['id'] == id:
+      item['title']= movie.title,
+      item['overview']= movie.overview,
+      item['year']= movie.year,
+      item['rating']= movie.rating,
+      item['category']= movie.category
+      return JSONResponse(content={'message':"se modifico la pelicula correctamente"})
 
-@app.delete('/movies/{id}', tags=['Movies'])
+@app.delete('/movies/{id}', tags=['Movies'],status_code=200)
 def delete_movie(id: int):
   for item in movies:
     if item['id'] == id:
       movies.remove(item)
-      return movies
+      return JSONResponse(content={'message':"se ha eliminado la pelicula correctamente"})
