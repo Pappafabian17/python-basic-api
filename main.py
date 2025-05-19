@@ -1,14 +1,24 @@
-from fastapi import FastAPI, Body, Path, Query
+from fastapi import FastAPI, Body, Path, Query, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field
 from typing import Optional
-from user_jwt import createToken
+from user_jwt import createToken, validateToken
 
 app = FastAPI(
   title='Aprendiendo FastApi',
   description='Una api en los primero pasos',
   version='0.0.1'
 )
+
+class BearerJWT(HTTPBearer):
+  async def __call__(self, request : Request):
+    auth = await super().__call__(request)
+    data = validateToken(auth.credentials)
+    if(data['email'] != 'fabian@gmail.com' ):
+      raise HTTPException(status_code=403, detail="Credenciales incorrectas ")
+
+
 
 class Movie(BaseModel):
   id:Optional[int] = None
@@ -53,7 +63,7 @@ def login(user : User):
 def read_root():
   return HTMLResponse('<h2>Noticion de hola mundo</h2>')
 
-@app.get('/movies',tags=['Movies'])
+@app.get('/movies',tags=['Movies'], dependencies=[Depends(BearerJWT())])
 def get_movies():
   return JSONResponse(content=movies)
 
