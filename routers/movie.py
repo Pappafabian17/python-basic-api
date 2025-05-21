@@ -9,46 +9,6 @@ from models.movie import Movie as ModelMovie
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import func
 
-app = FastAPI(
-  title='Aprendiendo FastApi',
-  description='Una api en los primero pasos',
-  version='0.0.1'
-)
-
-
-Base.metadata.create_all(bind=engine)
-
-class BearerJWT(HTTPBearer):
-  async def __call__(self, request : Request):
-    auth = await super().__call__(request)
-    data = validateToken(auth.credentials)
-    if(data['email'] != 'fabian@gmail.com' ):
-      raise HTTPException(status_code=403, detail="Credenciales incorrectas ")
-
-
-
-class Movie(BaseModel):
-  id:Optional[int] = None
-  title: str = Field( default='Titulo ', min_length=3)
-  overview: str =  Field(default='Descripcion de la pelicula ', min_length=15 , max_length=60)
-  year : int = Field(default=2025)
-  rating : float = Field(ge=1, le=10)
-  category : str = Field(default='Categoria', min_length=3 , max_length=15)
-
-class User(BaseModel):
-  email: str
-  password: str
-
-@app.post('/login', tags=["authentication"])
-def login(user : User):
-  if user.email == 'fabian@gmail.com' and user.password == '123':
-    token : str = createToken(dict(user))
-    print(token)
-    return JSONResponse(content=token)
-
-@app.get('/',tags=['Inicio'])
-def read_root():
-  return HTMLResponse('<h2>Noticion de hola mundo</h2>')
 
 @app.get('/movies',tags=['Movies'], dependencies=[Depends(BearerJWT())])
 def get_movies():
